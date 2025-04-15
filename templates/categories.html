@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}Categories | JobConnect{% endblock %}
+{% block content %}
+    <div class="container mx-auto px-4 py-12">
+        <h1 class="text-3xl font-bold text-primary-blue mb-8 text-center">Browse Job Categories</h1>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+            {% for category in categories %}
+            <a href="{{ url_for('category_jobs', category_id=category.id) }}" class="job-card bg-white rounded-lg shadow-md p-6 flex flex-col items-center text-center hover:shadow-xl transition cursor-pointer">
+                <div class="mb-4">
+                    {% if category.name == 'Software Development' %}
+                        <i class="fas fa-code text-4xl text-primary-blue"></i>
+                    {% elif category.name == 'Marketing' %}
+                        <i class="fas fa-bullhorn text-4xl text-primary-blue"></i>
+                    {% elif category.name == 'Design' %}
+                        <i class="fas fa-palette text-4xl text-primary-blue"></i>
+                    {% elif category.name == 'Data Science' %}
+                        <i class="fas fa-chart-bar text-4xl text-primary-blue"></i>
+                    {% elif category.name == 'Product Management' %}
+                        <i class="fas fa-tasks text-4xl text-primary-blue"></i>
+                    {% elif category.name == 'Sales' %}
+                        <i class="fas fa-handshake text-4xl text-primary-blue"></i>
+                    {% else %}
+                        <i class="fas fa-briefcase text-4xl text-primary-blue"></i>
+                    {% endif %}
+                </div>
+                <h2 class="text-xl font-semibold mb-2">{{ category.name }}</h2>
+                <p class="text-gray-600 mb-4">{{ category.description }}</p>
+                <span class="mint-badge">{{ category.job_count }} Jobs</span>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}

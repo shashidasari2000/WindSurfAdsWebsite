@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Seeker Dashboard - JobConnect</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #0e76bc;
+            --secondary-blue: #0a5a8f;
+            --primary-mint: #5ce6b6;
+            --secondary-mint: #3fd19e;
+            --light-mint: #d7f8ed;
+            --dark-text: #333;
+            --light-text: #fff;
+            --bg-gray: #f5f7fa;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: var(--dark-text);
+            background-color: var(--bg-gray);
+        }
+        
+        .btn-mint {
+            background-color: var(--primary-mint);
+            color: var(--dark-text);
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .btn-mint:hover {
+            background-color: var(--secondary-mint);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(92, 230, 182, 0.3);
+        }
+        
+        .header {
+            background-color: var(--primary-blue);
+            padding: 1rem 0;
+            position: relative;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header sticky top-0 z-50">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center">
+                <a href="{{ url_for('index') }}" class="text-2xl font-bold text-white">JobConnect</a>
+                <nav class="hidden md:flex space-x-8">
+                    <a href="{{ url_for('index') }}" class="text-white hover:text-mint-text">Home</a>
+                    <a href="{{ url_for('search_jobs') }}" class="btn-mint">Find Jobs</a>
+                    <a href="{{ url_for('logout') }}" class="text-white hover:text-mint-text">Logout</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Dashboard Content -->
+    <div class="container mx-auto px-4 py-8">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold">Job Seeker Dashboard</h1>
+            <a href="{{ url_for('search_jobs') }}" class="btn-mint">
+                <i class="fas fa-search mr-2"></i>Browse Jobs
+            </a>
+        </div>
+
+        <!-- Stats Section -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="card">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-blue-100 mr-4">
+                        <i class="fas fa-paper-plane text-blue-500 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-600">Applications</p>
+                        <h3 class="text-2xl font-bold">{{ applications|length }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-yellow-100 mr-4">
+                        <i class="fas fa-clock text-yellow-500 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-600">Pending</p>
+                        <h3 class="text-2xl font-bold">{{ applications|selectattr('status', 'equalto', 'APPLIED')|list|length }}</h3>
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="flex items-center">
+                    <div class="p-3 rounded-full bg-green-100 mr-4">
+                        <i class="fas fa-check-circle text-green-500 text-xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-600">Interviews</p>
+                        <h3 class="text-2xl font-bold">{{ applications|selectattr('status', 'equalto', 'INTERVIEW')|list|length }}</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Job Applications -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold mb-4">Your Applications</h2>
+            {% if applications %}
+                <div class="grid grid-cols-1 gap-6">
+                    {% for application in applications %}
+                        <div class="card">
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h3 class="text-xl font-semibold mb-2">{{ application.job.title }}</h3>
+                                    <p class="text-gray-600 mb-2">{{ application.job.company.name }}</p>
+                                    <div class="flex space-x-4 text-sm text-gray-500">
+                                        <span><i class="fas fa-map-marker-alt mr-1"></i>{{ application.job.location }}</span>
+                                        <span><i class="fas fa-clock mr-1"></i>{{ application.job.job_type.value }}</span>
+                                        <span><i class="fas fa-calendar mr-1"></i>Applied on {{ application.applied_at.strftime('%Y-%m-%d') }}</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <span class="px-4 py-2 rounded-full text-sm 
+                                        {% if application.status.value == 'Applied' %}bg-blue-100 text-blue-700
+                                        {% elif application.status.value == 'Reviewing' %}bg-yellow-100 text-yellow-700
+                                        {% elif application.status.value == 'Interview' %}bg-purple-100 text-purple-700
+                                        {% elif application.status.value == 'Offer' %}bg-green-100 text-green-700
+                                        {% elif application.status.value == 'Rejected' %}bg-red-100 text-red-700
+                                        {% else %}bg-gray-100 text-gray-700{% endif %}">
+                                        {{ application.status.value }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="mt-4 pt-4 border-t">
+                                <div class="flex justify-between items-center">
+                                    <a href="{{ url_for('job_detail', job_id=application.job.id) }}" class="text-blue-600 hover:underline">View Job Details</a>
+                                    {% if application.status.value == 'Applied' %}
+                                        <button class="text-red-600 hover:text-red-800">
+                                            <i class="fas fa-times mr-1"></i>Withdraw Application
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-8">
+                    <p class="text-gray-600 mb-4">You haven't applied to any jobs yet</p>
+                    <a href="{{ url_for('search_jobs') }}" class="btn-mint">Start Applying</a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Recommended Jobs -->
+        <div>
+            <h2 class="text-2xl font-bold mb-4">Recommended for You</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- This section can be populated with job recommendations based on the user's profile and previous applications -->
+                <div class="text-center py-8 col-span-2">
+                    <p class="text-gray-600">Coming soon! We're working on personalized job recommendations.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-2xl font-bold mb-4">JobConnect</h3>
+                    <p class="text-gray-400">Connecting talent with opportunity</p>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Quick Links</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white">About Us</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Contact</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Privacy Policy</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Terms of Service</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Resources</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white">Career Advice</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Resume Tips</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Interview Guide</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Follow Us</h4>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-linkedin"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-facebook"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-8 pt-8 text-center">
+                <p class="text-gray-400">&copy; {{ current_year }} JobConnect. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

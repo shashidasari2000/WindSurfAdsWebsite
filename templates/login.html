@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - JobConnect</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #0e76bc;
+            --secondary-blue: #0a5a8f;
+            --primary-mint: #5ce6b6;
+            --secondary-mint: #3fd19e;
+            --light-mint: #d7f8ed;
+            --dark-text: #333;
+            --light-text: #fff;
+            --bg-gray: #f5f7fa;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            color: var(--dark-text);
+            background-color: var(--bg-gray);
+        }
+        
+        .btn-mint {
+            background-color: var(--primary-mint);
+            color: var(--dark-text);
+            padding: 0.75rem 1.5rem;
+            border-radius: 50px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .btn-mint:hover {
+            background-color: var(--secondary-mint);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(92, 230, 182, 0.3);
+        }
+        
+        .header {
+            background-color: var(--primary-blue);
+            padding: 1rem 0;
+            position: relative;
+        }
+        
+        .form-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-mint);
+            box-shadow: 0 0 0 3px var(--light-mint);
+        }
+        
+        .form-label {
+            font-weight: 500;
+            color: var(--dark-text);
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+        
+        .error-message {
+            color: #e53e3e;
+            font-size: 0.875rem;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center">
+                <a href="{{ url_for('index') }}" class="text-2xl font-bold text-white">JobConnect</a>
+                <nav class="hidden md:flex space-x-8">
+                    <a href="{{ url_for('index') }}" class="text-white hover:text-mint-text">Home</a>
+                    <a href="{{ url_for('register') }}" class="text-white hover:text-mint-text">Register</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Login Form -->
+    <div class="min-h-screen py-16">
+        <div class="container mx-auto px-4">
+            <div class="max-w-md mx-auto">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold mb-2">Welcome Back</h1>
+                    <p class="text-gray-600">Sign in to your JobConnect account</p>
+                </div>
+
+                <div class="form-card">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                                    {{ message }}
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form action="{{ url_for('login') }}" method="POST">
+                        <div class="mb-6">
+                            <label for="email" class="form-label">Email Address</label>
+                            <input type="email" id="email" name="email" class="form-input" required>
+                        </div>
+
+                        <div class="mb-6">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" id="password" name="password" class="form-input" required>
+                            <div class="flex justify-end mt-2">
+                                <a href="#" class="text-sm text-primary-blue hover:underline">Forgot Password?</a>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-mint">Sign In</button>
+
+                        <div class="mt-6 text-center text-gray-600">
+                            Don't have an account? 
+                            <a href="{{ url_for('register') }}" class="text-primary-blue hover:underline">Create one here</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 text-white py-12">
+        <div class="container mx-auto px-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div>
+                    <h3 class="text-2xl font-bold mb-4">JobConnect</h3>
+                    <p class="text-gray-400">Connecting talent with opportunity</p>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Quick Links</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white">About Us</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Contact</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Privacy Policy</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Terms of Service</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">For Employers</h4>
+                    <ul class="space-y-2">
+                        <li><a href="#" class="text-gray-400 hover:text-white">Post a Job</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Browse Candidates</a></li>
+                        <li><a href="#" class="text-gray-400 hover:text-white">Pricing Plans</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold mb-4">Follow Us</h4>
+                    <div class="flex space-x-4">
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-linkedin"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-facebook"></i></a>
+                        <a href="#" class="text-gray-400 hover:text-white"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-800 mt-8 pt-8 text-center">
+                <p class="text-gray-400">&copy; {{ current_year }} JobConnect. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Your Profile - JobConnect{% endblock %}
+{% block content %}
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto">
+            <!-- Profile Header -->
+            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h1 class="text-3xl font-bold">Your Profile</h1>
+                    <button type="button" onclick="toggleEdit()" class="btn-mint">
+                        <i class="fas fa-edit mr-2"></i>
+                        Edit Profile
+                    </button>
+                </div>
+                
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="mb-4 p-4 rounded-lg {% if category == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                <!-- View Mode -->
+                <div id="view-mode">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2">Basic Information</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <p class="text-gray-600">Full Name</p>
+                                    <p class="font-medium">{{ user.full_name or 'Not set' }}</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-600">Email</p>
+                                    <p class="font-medium">{{ user.email }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold mb-2">Professional Details</h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <p class="text-gray-600">Resume</p>
+                                    {% if user.resume_path %}
+                                        <a href="{{ url_for('static', filename='uploads/' + user.resume_path) }}" class="text-blue-600 hover:underline" target="_blank">
+                                            <i class="fas fa-file-pdf mr-2"></i>View Resume
+                                        </a>
+                                    {% else %}
+                                        <p class="text-gray-500">No resume uploaded</p>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <p class="text-gray-600">Skills</p>
+                                    <div class="flex flex-wrap gap-2">
+                                        {% if current_skills %}
+                                            {% for skill in current_skills.split(',') %}
+                                                <span class="bg-light-mint text-secondary-blue px-3 py-1 rounded-full text-sm">{{ skill.strip() }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <p class="text-gray-500">No skills added</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-6">
+                        <h3 class="text-lg font-semibold mb-2">Professional Summary</h3>
+                        <p class="text-gray-700">{{ user.bio or 'No summary added' }}</p>
+                    </div>
+                </div>
+
+                <!-- Edit Mode -->
+                <div id="edit-mode" class="hidden">
+                    <form action="{{ url_for('profile') }}" method="POST" enctype="multipart/form-data">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h3 class="text-lg font-semibold mb-4">Basic Information</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label for="full_name" class="block text-gray-600 mb-1">Full Name</label>
+                                        <input type="text" id="full_name" name="full_name" value="{{ user.full_name or '' }}"
+                                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-mint focus:outline-none">
+                                    </div>
+                                    <div>
+                                        <label for="email" class="block text-gray-600 mb-1">Email</label>
+                                        <input type="email" id="email" name="email" value="{{ user.email }}"
+                                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-mint focus:outline-none">
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-semibold mb-4">Professional Details</h3>
+                                <div class="space-y-4">
+                                    <div>
+                                        <label for="resume" class="block text-gray-600 mb-1">Resume (PDF)</label>
+                                        <input type="file" id="resume" name="resume" accept=".pdf"
+                                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-mint focus:outline-none">
+                                        {% if user.resume_path %}
+                                            <p class="text-sm text-gray-500 mt-1">Current: {{ user.resume_path }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <label for="skills" class="block text-gray-600 mb-1">Skills (comma separated)</label>
+                                        <input type="text" id="skills" name="skills" value="{{ current_skills }}"
+                                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-mint focus:outline-none"
+                                               placeholder="e.g., Python, JavaScript, Project Management">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-6">
+                            <label for="bio" class="block text-gray-600 mb-1">Professional Summary</label>
+                            <textarea id="bio" name="bio" rows="4"
+                                      class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-primary-mint focus:outline-none"
+                                      placeholder="Brief description of your experience and career goals">{{ user.bio or '' }}</textarea>
+                        </div>
+                        <div class="mt-6 flex justify-end space-x-4">
+                            <button type="button" onclick="toggleEdit()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                                Cancel
+                            </button>
+                            <button type="submit" class="btn-mint">
+                                <i class="fas fa-save mr-2"></i>
+                                Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Job Applications -->
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h2 class="text-2xl font-bold mb-6">Your Job Applications</h2>
+                <div class="space-y-4">
+                    {% if user.applications %}
+                        {% for application in user.applications %}
+                            <div class="border rounded-lg p-4 hover:border-primary-mint transition-colors">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h3 class="text-lg font-semibold">{{ application.job.title }}</h3>
+                                        <p class="text-gray-600">{{ application.job.company.name }}</p>
+                                    </div>
+                                    <span class="px-3 py-1 rounded-full text-sm 
+                                        {% if application.status == ApplicationStatus.PENDING %}bg-yellow-100 text-yellow-800
+                                        {% elif application.status == ApplicationStatus.ACCEPTED %}bg-green-100 text-green-800
+                                        {% elif application.status == ApplicationStatus.REJECTED %}bg-red-100 text-red-800
+                                        {% endif %}">
+                                        {{ application.status.value }}
+                                    </span>
+                                </div>
+                                <div class="mt-2 text-sm text-gray-500">
+                                    Applied on {{ application.applied_at.strftime('%B %d, %Y') }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-8">
+                            <i class="fas fa-briefcase text-4xl text-gray-300 mb-4"></i>
+                            <p class="text-gray-500">You haven't applied to any jobs yet</p>
+                            <a href="{{ url_for('jobs') }}" class="btn-mint inline-block mt-4">Browse Jobs</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function toggleEdit() {
+            const viewMode = document.getElementById('view-mode');
+            const editMode = document.getElementById('edit-mode');
+            
+            if (viewMode.classList.contains('hidden')) {
+                viewMode.classList.remove('hidden');
+                editMode.classList.add('hidden');
+            } else {
+                viewMode.classList.add('hidden');
+                editMode.classList.remove('hidden');
+            }
+        }
+    </script>
+{% endblock %}

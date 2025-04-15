@@ -1,0 +1,4 @@
+flask
+python-dotenv
+infobip-api-client
+python-dateutil
