@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-6xl mx-auto py-10 px-4">
+    <div class="flex items-center gap-3 mb-8">
+        <span class="text-2xl text-primary-mint"><i class="fas fa-users"></i></span>
+        <h2 class="text-2xl md:text-3xl font-bold">Manage Users</h2>
+        <a href="{{ url_for('admin_create_user') }}" class="ml-auto bg-primary-mint text-dark-text px-5 py-2 rounded-full font-medium shadow hover:bg-secondary-mint transition flex items-center gap-2"><i class="fas fa-user-plus"></i> Create New User</a>
+    </div>
+    <div class="overflow-x-auto rounded-xl shadow">
+        <table class="min-w-full bg-white text-sm rounded-xl">
+            <thead class="bg-mint-100 text-gray-700">
+                <tr>
+                    <th class="py-3 px-4 text-left">Username</th>
+                    <th class="py-3 px-4 text-left">Email</th>
+                    <th class="py-3 px-4 text-left">Role</th>
+                    <th class="py-3 px-4 text-left">Type</th>
+                    <th class="py-3 px-4 text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for user in users %}
+                <tr class="border-b hover:bg-mint-100/50 transition">
+                    <td class="py-3 px-4 font-medium">{{ user.username }}</td>
+                    <td class="py-3 px-4">{{ user.email }}</td>
+                    <td class="py-3 px-4">{{ user.role }}</td>
+                    <td class="py-3 px-4">{% if user.is_employer %}Employer{% else %}Employee{% endif %}</td>
+                    <td class="py-3 px-4 flex gap-2">
+                        <a href="{{ url_for('admin_edit_user', user_id=user.id) }}" class="bg-yellow-400 text-white px-3 py-1 rounded hover:bg-yellow-500 transition"><i class="fas fa-edit"></i> Edit</a>
+                        <form action="{{ url_for('admin_delete_user', user_id=user.id) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition" onclick="return confirm('Are you sure?')"><i class="fas fa-trash"></i> Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

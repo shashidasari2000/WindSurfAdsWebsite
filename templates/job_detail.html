@@ -226,7 +226,7 @@
                 </div>
                 <div class="sidebar-card">
                     <h3 class="font-semibold mb-2">Apply for this job</h3>
-                    <form method="POST" enctype="multipart/form-data" action="{{ url_for('job_detail', job_id=job.id) }}">
+                    <form method="POST" enctype="multipart/form-data" action="{{ url_for('job_detail', job_hashid=hashids.encode(job.id)) }}">
                         <label class="block mb-2">Upload Resume</label>
                         <input type="file" name="resume" class="mb-4 w-full" required>
                         <label class="block mb-2">Cover Letter (Optional)</label>

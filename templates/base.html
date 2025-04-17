@@ -208,6 +208,22 @@
 </head>
 <body>
     {% include '_navbar.html' %}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="max-w-2xl mx-auto mt-6">
+          {# Prevent duplicate messages without using 'do' #}
+          {% set last_message = None %}
+          {% for category, message in messages %}
+            {% if message != last_message %}
+              <div class="mb-2 px-6 py-3 rounded-lg shadow bg-green-100 text-green-800 font-medium">
+                {{ message }}
+              </div>
+            {% endif %}
+            {% set last_message = message %}
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
     {% block content %}{% endblock %}
     <footer class="bg-gray-900 text-white py-12 mt-16">
         <div class="container mx-auto px-4">

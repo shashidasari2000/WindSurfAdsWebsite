@@ -1,0 +1,49 @@
+
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="max-w-6xl mx-auto py-10 px-4">
+    <div class="flex items-center gap-3 mb-8">
+        <span class="text-2xl text-primary-mint"><i class="fas fa-briefcase"></i></span>
+        <h2 class="text-2xl md:text-3xl font-bold">Manage Job Listings</h2>
+        <a href="{{ url_for('admin_create_job') }}" class="ml-auto bg-primary-mint text-dark-text px-5 py-2 rounded-full font-medium shadow hover:bg-secondary-mint transition flex items-center gap-2"><i class="fas fa-plus"></i> Create New Job</a>
+    </div>
+    <div class="overflow-x-auto rounded-xl shadow">
+        <table class="min-w-full bg-white text-sm rounded-xl">
+            <thead class="bg-mint-100 text-gray-700">
+                <tr>
+                    <th class="py-3 px-4 text-left">Title</th>
+                    <th class="py-3 px-4 text-left">Company</th>
+                    <th class="py-3 px-4 text-left">Location</th>
+                    <th class="py-3 px-4 text-left">Type</th>
+                    <th class="py-3 px-4 text-left">Posted Date</th>
+                    <th class="py-3 px-4 text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for job in jobs %}
+                <tr class="border-b hover:bg-mint-100/50 transition">
+                    <td class="py-3 px-4 font-medium">{{ job.title }}{% if job.is_deleted %} <span class="text-red-500 text-sm">(Deleted)</span>{% endif %}</td>
+                    <td class="py-3 px-4">{{ job.company.name }}</td>
+                    <td class="py-3 px-4">{{ job.location }}</td>
+                    <td class="py-3 px-4">{{ job.job_type.value }}</td>
+                    <td class="py-3 px-4">{{ job.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td class="py-3 px-4 flex gap-2">
+                        <a href="{{ url_for('admin_edit_job', job_hashid=hashids.encode(job.id)) }}" class="bg-yellow-400 text-white px-3 py-1 rounded hover:bg-yellow-500 transition"><i class="fas fa-edit"></i> Edit</a>
+                        {% if job.is_deleted %}
+                        <form action="{{ url_for('admin_activate_job', job_hashid=hashids.encode(job.id)) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition"><i class="fas fa-check"></i> Activate</button>
+                        </form>
+                        {% else %}
+                        <form action="{{ url_for('admin_delete_job', job_hashid=hashids.encode(job.id)) }}" method="POST" style="display:inline;">
+                            <button type="submit" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition" onclick="return confirm('Are you sure?')"><i class="fas fa-trash"></i> Delete</button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -156,11 +156,15 @@
                             </div>
                             <div class="mt-4 pt-4 border-t">
                                 <div class="flex justify-between items-center">
-                                    <a href="{{ url_for('job_detail', job_id=application.job.id) }}" class="text-blue-600 hover:underline">View Job Details</a>
-                                    {% if application.status.value == 'Applied' %}
-                                        <button class="text-red-600 hover:text-red-800">
+                                    <a href="{{ url_for('job_detail', job_hashid=hashids.encode(application.job.id)) }}" class="text-blue-600 hover:underline">View Job Details</a>
+                                    {% if application.status.value == 'Applied' and not application.is_withdraw %}
+                                    <form action="{{ url_for('withdraw_application', application_id=application.id) }}" method="post" style="display:inline;" onsubmit="return confirm('Withdrawing this application is permanent. Only an admin or customer care can reactivate your application after withdrawal. Are you sure you want to proceed?');">
+                                        <button type="submit" class="text-red-600 hover:text-red-800 bg-transparent border-none cursor-pointer">
                                             <i class="fas fa-times mr-1"></i>Withdraw Application
                                         </button>
+                                    </form>
+                                    {% elif application.is_withdraw %}
+                                    <span class="text-red-500 font-semibold">Withdrawn</span>
                                     {% endif %}
                                 </div>
                             </div>

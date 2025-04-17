@@ -99,7 +99,7 @@
                             <div class="job-card bg-white p-6 rounded-lg shadow-sm hover:shadow-md transition-shadow">
                                 <div class="flex justify-between items-start mb-4">
                                     <div class="company-logo mr-4 rounded-lg bg-gray-100 p-3">
-                                        <i class="fas fa-building text-2xl text-primary-blue"></i>
+                                        <i class="fas {{ job.category.icon_class or 'fa-briefcase' }} text-2xl text-primary-blue"></i>
                                     </div>
                                     <span class="category-pill">{{ job.category.name }}</span>
                                 </div>
@@ -125,7 +125,7 @@
                                     <span class="text-sm text-gray-500">
                                         Posted {{ job.created_at.strftime('%b %d, %Y') }}
                                     </span>
-                                    <a href="{{ url_for('job_detail', job_id=job.id) }}" class="btn-mint">View Details</a>
+                                    <a href="{{ url_for('job_detail', job_hashid=hashids.encode(job.id)) }}" class="btn-mint">View Details</a>
                                 </div>
                             </div>
                             {% endfor %}

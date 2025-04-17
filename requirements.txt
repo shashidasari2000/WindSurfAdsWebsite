@@ -1,4 +1,11 @@
 flask
 python-dotenv
-infobip-api-client
+infobip-api-python-client
 python-dateutil
+flask_sqlalchemy
+flask_login
+flask_migrate
+Werkzeug
+alembic
+sqlalchemy
+hashids

@@ -1,4 +1,4 @@
-from flask import Flask, request, render_template, redirect, url_for, flash, jsonify, session
+from flask import Flask, request, render_template, redirect, url_for, flash, jsonify, session, abort
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from dotenv import load_dotenv
 from models import db, User, Job, Company, Category, JobType, ExperienceLevel, Skill, JobSkill, JobApplication, ApplicationStatus
@@ -7,6 +7,8 @@ import random
 import string
 import os
 from werkzeug.utils import secure_filename
+from flask_migrate import Migrate
+from hashids import Hashids
 
 # Load environment variables
 load_dotenv()
@@ -33,22 +35,43 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+# Initialize Flask-Migrate
+migrate = Migrate(app, db)
+
+# Initialize Hashids for obfuscated IDs
+hashids = Hashids(salt=app.secret_key, min_length=8)
+app.jinja_env.globals['hashids'] = hashids
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+# --- Role-based access control decorator ---
+from functools import wraps
+from flask import abort
+
+def role_required(role_name):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not current_user.is_authenticated or not current_user.has_role(role_name):
+                abort(403)
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+    
 # Root route to show the homepage
 @app.route('/')
 def index():
     # Get featured jobs
-    featured_jobs = Job.query.filter_by(is_active=True).order_by(Job.created_at.desc()).limit(6).all()
+    featured_jobs = Job.query.filter_by(is_active=True).filter(Job.is_deleted==False).join(Category).filter(Category.is_active == True).order_by(Job.created_at.desc()).limit(6).all()
     
     # Get all categories with their job counts
     categories = db.session.query(
         Category,
         db.func.count(Job.id).label('job_count')
     ).\
-    outerjoin(Job, (Category.id == Job.category_id) & (Job.is_active == True)).\
+    outerjoin(Job, (Category.id == Job.category_id) & (Job.is_active == True) & (Job.is_deleted == False) & (Category.is_active == True)).\
     group_by(Category.id).\
     all()
     
@@ -59,6 +82,8 @@ def index():
             'id': category.id,
             'name': category.name,
             'description': category.description,
+            'icon_class': category.icon_class,
+            'is_active': category.is_active,
             'job_count': job_count
         })
     
@@ -76,7 +101,7 @@ def jobs():
     location = request.args.get('location', '')
 
     # Base query
-    jobs_query = Job.query.filter_by(is_active=True)
+    jobs_query = Job.query.filter_by(is_active=True).filter(Job.is_deleted==False).join(Category).filter(Category.is_active == True)
 
     # Apply filters
     if selected_types:
@@ -105,7 +130,7 @@ def jobs():
     experience_levels = [member.value for member in ExperienceLevel]
     
     # Get categories for the navigation
-    categories = Category.query.all()
+    categories = Category.query.filter_by(is_active=True).all()
     
     return render_template('jobs.html',
                          jobs=all_jobs,
@@ -127,7 +152,7 @@ def search_jobs():
     location = request.args.get('location', '')
     
     # Base query
-    jobs_query = Job.query.filter_by(is_active=True)
+    jobs_query = Job.query.filter_by(is_active=True).filter(Job.is_deleted==False).join(Category).filter(Category.is_active == True)
     
     # Apply filters
     if selected_types:
@@ -154,7 +179,7 @@ def search_jobs():
     experience_levels = [member.value for member in ExperienceLevel]
     
     # Get categories for the navigation
-    categories = Category.query.all()
+    categories = Category.query.filter_by(is_active=True).all()
     
     return render_template('jobs.html',
                          jobs=jobs,
@@ -171,7 +196,7 @@ def search_jobs():
 def category_jobs(category_id):
     from flask import request
     category = Category.query.get_or_404(category_id)
-    jobs_query = Job.query.filter_by(category_id=category_id)
+    jobs_query = Job.query.filter_by(category_id=category_id).filter(Job.is_deleted==False).filter(Job.is_active==True)
     # Job Type filter (multi-select)
     job_types = request.args.getlist('job_type')
     if job_types:
@@ -191,7 +216,7 @@ def category_jobs(category_id):
 @login_required
 def categories():
     from models import Category
-    categories = Category.query.all()
+    categories = Category.query.filter_by(is_active=True).all()
     return render_template('categories.html', categories=categories)
 
 # MSG91 configuration
@@ -203,8 +228,12 @@ if not all([MSG91_API_KEY, MSG91_TEMPLATE_ID, MSG91_SENDER_ID]):
     raise ValueError("MSG91 configuration not found in environment variables")
 
 # Job listing routes
-@app.route('/jobs/<int:job_id>', methods=['GET', 'POST'])
-def job_detail(job_id):
+@app.route('/jobs/<job_hashid>', methods=['GET', 'POST'])
+def job_detail(job_hashid):
+    decoded = hashids.decode(job_hashid)
+    if not decoded:
+        abort(404)
+    job_id = decoded[0]
     job = Job.query.get_or_404(job_id)
     
     # Get required and preferred skills
@@ -263,7 +292,7 @@ def job_detail(job_id):
 @app.route('/companies/<int:company_id>')
 def company_detail(company_id):
     company = Company.query.get_or_404(company_id)
-    jobs = Job.query.filter_by(company_id=company_id, is_active=True).all()
+    jobs = Job.query.filter_by(company_id=company_id, is_active=True).filter(Job.is_deleted==False).join(Category).filter(Category.is_active == True).all()
     
     return render_template('company_detail.html', company=company, jobs=jobs)
 
@@ -273,7 +302,7 @@ def search_jobs_api():
     search_query = request.args.get('query', '')
     location = request.args.get('location', '')
     
-    jobs_query = Job.query.filter(Job.is_active == True)
+    jobs_query = Job.query.filter(Job.is_active == True).filter(Job.is_deleted==False).join(Category).filter(Category.is_active == True)
     
     if search_query:
         jobs_query = jobs_query.filter(Job.title.ilike(f'%{search_query}%') | 
@@ -292,7 +321,7 @@ def search_jobs_api():
             'company': job.company.name,
             'location': job.location,
             'job_type': job.job_type.value,
-            'url': url_for('job_detail', job_id=job.id)
+            'url': url_for('job_detail', job_hashid=hashids.encode(job.id))
         })
     
     return jsonify(results)
@@ -477,7 +506,7 @@ def complete_profile():
         return redirect(url_for('jobs'))
     
     # GET request - show the form
-    categories = Category.query.all()
+    categories = Category.query.filter_by(is_active=True).all()
     return render_template('complete_profile.html', categories=categories)
 
 @app.route('/post_job', methods=['GET', 'POST'])
@@ -503,7 +532,7 @@ def post_job():
         # Validate required fields
         if not title or not description or not job_type or not category_id:
             flash('Please fill in all required fields', 'error')
-            categories = Category.query.all()
+            categories = Category.query.filter_by(is_active=True).all()
             return render_template('post_job.html', categories=categories)
         
         # Create new job
@@ -545,7 +574,7 @@ def post_job():
         return redirect(url_for('job_listings'))
     
     # GET request - show the form
-    categories = Category.query.all()
+    categories = Category.query.filter_by(is_active=True).all()
     return render_template('post_job.html', categories=categories)
 
 @app.route('/dashboard')
@@ -553,7 +582,7 @@ def post_job():
 def dashboard():
     if current_user.is_employer:
         # Get jobs posted by this employer
-        jobs = Job.query.filter_by(user_id=current_user.id).order_by(Job.created_at.desc()).all()
+        jobs = Job.query.filter_by(user_id=current_user.id).filter(Job.is_deleted==False).join(Category).filter(Category.is_active == True).order_by(Job.created_at.desc()).all()
         return render_template('employer_dashboard.html', jobs=jobs, current_year=datetime.now().year)
     else:
         # Get job applications for this job seeker
@@ -720,6 +749,192 @@ def applications():
     user_applications = JobApplication.query.filter_by(user_id=current_user.id).all()
     return render_template('applications.html', applications=user_applications)
 
+@app.route('/withdraw_application/<int:application_id>', methods=['POST'])
+@login_required
+def withdraw_application(application_id):
+    application = JobApplication.query.get_or_404(application_id)
+    # Only the user who owns the application can withdraw
+    if application.user_id != current_user.id:
+        flash('You are not authorized to withdraw this application.', 'danger')
+        return redirect(url_for('dashboard'))
+    application.is_withdraw = True
+    db.session.commit()
+    flash('Your application has been withdrawn.', 'info')
+    return redirect(url_for('dashboard'))
+
+# --- Admin Job Management Routes ---
+@app.route('/admin/jobs')
+@login_required
+@role_required('admin')
+def admin_jobs():
+    jobs = Job.query.order_by(Job.created_at.desc()).all()
+    return render_template('admin_jobs.html', jobs=jobs)
+
+@app.route('/admin/jobs/create', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def admin_create_job():
+    # TODO: Implement job creation logic
+    return 'Job creation form here'
+
+@app.route('/admin/jobs/<job_hashid>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def admin_edit_job(job_hashid):
+    # Decode hashid to integer ID
+    decoded = hashids.decode(job_hashid)
+    if not decoded:
+        abort(404)
+    job_id = decoded[0]
+    job = Job.query.get_or_404(job_id)
+    if request.method == 'POST':
+        job.title = request.form['title']
+        job.description = request.form['description']
+        job.location = request.form['location']
+        job.salary_min = request.form.get('salary_min', type=int)
+        job.salary_max = request.form.get('salary_max', type=int)
+        job.job_type = JobType[request.form['job_type']]
+        job.experience_level = ExperienceLevel[request.form['experience_level']]
+        job.category_id = request.form.get('category_id', type=int)
+        job.company_id = request.form.get('company_id', type=int)
+        job.is_active = 'is_active' in request.form
+        db.session.commit()
+        flash('Job updated successfully', 'success')
+        return redirect(url_for('admin_jobs'))
+    companies = Company.query.all()
+    categories = Category.query.filter_by(is_active=True).all()
+    job_types = list(JobType)
+    experience_levels = list(ExperienceLevel)
+    return render_template('admin_job_form.html',
+                           job=job,
+                           companies=companies,
+                           categories=categories,
+                           job_types=job_types,
+                           experience_levels=experience_levels)
+
+@app.route('/admin/jobs/<job_hashid>/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def admin_delete_job(job_hashid):
+    decoded = hashids.decode(job_hashid)
+    if not decoded:
+        abort(404)
+    job_id = decoded[0]
+    job = Job.query.get_or_404(job_id)
+    job.is_deleted = True
+    db.session.commit()
+    flash('Job soft-deleted successfully', 'success')
+    return redirect(url_for('admin_jobs'))
+
+@app.route('/admin/jobs/<job_hashid>/activate', methods=['POST'])
+@login_required
+@role_required('admin')
+def admin_activate_job(job_hashid):
+    decoded = hashids.decode(job_hashid)
+    if not decoded:
+        abort(404)
+    job_id = decoded[0]
+    job = Job.query.get_or_404(job_id)
+    job.is_deleted = False
+    db.session.commit()
+    flash('Job activated successfully', 'success')
+    return redirect(url_for('admin_jobs'))
+
+# --- Admin User Management Routes ---
+@app.route('/admin/users')
+@login_required
+@role_required('admin')
+def admin_users():
+    users = User.query.order_by(User.created_at.desc()).all()
+    return render_template('admin_users.html', users=users)
+
+@app.route('/admin/users/create', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def admin_create_user():
+    # TODO: Implement user creation logic
+    return 'User creation form here'
+
+@app.route('/admin/users/<int:user_id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def admin_edit_user(user_id):
+    # TODO: Implement user edit logic
+    return f'Edit user {user_id}'
+
+@app.route('/admin/users/<int:user_id>/delete', methods=['POST'])
+@login_required
+@role_required('admin')
+def admin_delete_user(user_id):
+    # TODO: Implement user delete logic
+    return f'Delete user {user_id}'
+
+@app.route('/admin/categories')
+@login_required
+@role_required('admin')
+def admin_categories():
+    categories = Category.query.order_by(Category.id).all()
+    return render_template('admin_categories.html', categories=categories)
+
+@app.route('/admin/categories/create', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def admin_create_category():
+    if request.method == 'POST':
+        name = request.form['name']
+        description = request.form.get('description')
+        icon_class = request.form.get('icon_class')
+        is_active = bool(request.form.get('is_active', True))
+        category = Category(name=name, description=description, icon_class=icon_class, is_active=is_active)
+        db.session.add(category)
+        db.session.commit()
+        flash('Category created successfully.', 'success')
+        return redirect(url_for('admin_categories'))
+    return render_template('admin_category_form.html')
+
+@app.route('/admin/categories/<int:category_id>/edit', methods=['GET', 'POST'])
+@login_required
+@role_required('admin')
+def admin_edit_category(category_id):
+    category = Category.query.get_or_404(category_id)
+    if request.method == 'POST':
+        category.name = request.form['name']
+        category.description = request.form.get('description')
+        category.icon_class = request.form.get('icon_class')
+        category.is_active = bool(request.form.get('is_active', True))
+        db.session.commit()
+        flash('Category updated successfully.', 'success')
+        return redirect(url_for('admin_categories'))
+    return render_template('admin_category_form.html', category=category)
+
+@app.route('/admin/categories/<int:category_id>/deactivate')
+@login_required
+@role_required('admin')
+def admin_deactivate_category(category_id):
+    category = Category.query.get_or_404(category_id)
+    category.is_active = False
+    db.session.commit()
+    flash('Category deactivated.', 'info')
+    return redirect(url_for('admin_categories'))
+
+@app.route('/admin/categories/<int:category_id>/activate')
+@login_required
+@role_required('admin')
+def admin_activate_category(category_id):
+    category = Category.query.get_or_404(category_id)
+    category.is_active = True
+    db.session.commit()
+    flash('Category activated.', 'success')
+    return redirect(url_for('admin_categories'))
+
+# --- Admin Dashboard Route Example ---
+@app.route('/admin/dashboard')
+@login_required
+@role_required('admin')
+def admin_dashboard():
+    # Example: show admin dashboard template
+    return render_template('admin_dashboard.html')
+
 def send_otp(user):
     # Generate 6-digit OTP
     otp = str(random.randint(100000, 999999))
@@ -780,4 +995,4 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5001)
+    app.run(debug=True, port=5002)

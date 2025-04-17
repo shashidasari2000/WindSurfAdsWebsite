@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Admin Categories | JobConnect{% endblock %}
+{% block content %}
+<div class="max-w-6xl mx-auto py-10 px-4">
+    <div class="flex items-center gap-3 mb-8">
+        <span class="text-2xl text-primary-mint"><i class="fas fa-layer-group"></i></span>
+        <h2 class="text-2xl md:text-3xl font-bold">Manage Categories</h2>
+        <a href="{{ url_for('admin_create_category') }}" class="ml-auto bg-primary-mint text-dark-text px-5 py-2 rounded-full font-medium shadow hover:bg-secondary-mint transition flex items-center gap-2"><i class="fas fa-plus"></i> Add New Category</a>
+    </div>
+    <div class="overflow-x-auto rounded-xl shadow">
+        <table class="min-w-full bg-white text-sm rounded-xl">
+            <thead class="bg-mint-100 text-gray-700">
+                <tr>
+                    <th class="py-3 px-4 text-left">ID</th>
+                    <th class="py-3 px-4 text-left">Name</th>
+                    <th class="py-3 px-4 text-left">Description</th>
+                    <th class="py-3 px-4 text-left">Icon</th>
+                    <th class="py-3 px-4 text-left">Active</th>
+                    <th class="py-3 px-4 text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for category in categories %}
+                <tr class="border-b hover:bg-mint-100/50 transition">
+                    <td class="py-3 px-4 font-medium">{{ category.id }}</td>
+                    <td class="py-3 px-4 font-semibold text-gray-800">{{ category.name }}</td>
+                    <td class="py-3 px-4 text-gray-600">{{ category.description }}</td>
+                    <td class="py-3 px-4 text-xl"><i class="fas {{ category.icon_class }} text-blue-600"></i></td>
+                    <td class="py-3 px-4">
+                        {% if category.is_active %}
+                            <span class="inline-block px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-bold">Active</span>
+                        {% else %}
+                            <span class="inline-block px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-bold">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="py-3 px-4 flex gap-2">
+                        <a href="{{ url_for('admin_edit_category', category_id=category.id) }}" class="bg-yellow-400 text-white px-3 py-1 rounded hover:bg-yellow-500 transition"><i class="fas fa-edit"></i> Edit</a>
+                        {% if category.is_active %}
+                            <a href="{{ url_for('admin_deactivate_category', category_id=category.id) }}" class="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition"><i class="fas fa-ban"></i> Deactivate</a>
+                        {% else %}
+                            <a href="{{ url_for('admin_activate_category', category_id=category.id) }}" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition"><i class="fas fa-check"></i> Activate</a>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

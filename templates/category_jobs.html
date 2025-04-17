@@ -93,7 +93,7 @@
                                     <p class="text-gray-700 mb-4">{{ job.description }}</p>
                                 </div>
                                 <div class="mt-2 flex justify-end">
-                                    <a href="{{ url_for('job_detail', job_id=job.id) }}"
+                                    <a href="{{ url_for('job_detail', job_hashid=hashids.encode(job.id)) }}"
                                        class="bg-blue-600 text-white px-8 py-3 rounded-full font-bold shadow-2xl border-2 border-blue-600 hover:bg-white hover:text-blue-600 hover:border-blue-600 transition">
                                        View & Apply
                                     </a>

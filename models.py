@@ -19,6 +19,8 @@ class User(db.Model, UserMixin):
     otp_created_at = db.Column(db.DateTime, nullable=True)
     is_verified = db.Column(db.Boolean, default=False)
     is_employer = db.Column(db.Boolean, default=False)
+    # Role-based access: 'admin', 'manager', 'viewer', etc.
+    role = db.Column(db.String(20), default='viewer', nullable=False)
     
     # New fields for profile completion
     full_name = db.Column(db.String(100), nullable=True)
@@ -37,6 +39,9 @@ class User(db.Model, UserMixin):
         
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+    
+    def has_role(self, role_name):
+        return self.role == role_name
     
     def __repr__(self):
         return f'<User {self.username}>'
@@ -85,6 +90,8 @@ class Category(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False, unique=True)
     description = db.Column(db.String(200), nullable=True)
+    icon_class = db.Column(db.String(100), nullable=True)  # e.g., 'fa-code', 'fa-bullhorn'
+    is_active = db.Column(db.Boolean, default=True)
     
     # Relationships
     jobs = db.relationship('Job', back_populates='category', lazy='dynamic')
@@ -107,6 +114,7 @@ class Job(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     expires_at = db.Column(db.DateTime, nullable=True)
     is_active = db.Column(db.Boolean, default=True)
+    is_deleted = db.Column(db.Boolean, default=False)
     company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
@@ -142,6 +150,7 @@ class JobApplication(db.Model):
     status = db.Column(db.Enum(ApplicationStatus), default=ApplicationStatus.APPLIED)
     applied_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    is_withdraw = db.Column(db.Boolean, default=False)
     
     # Relationships
     user = db.relationship('User', back_populates='applications')
