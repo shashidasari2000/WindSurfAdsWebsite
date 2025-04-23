@@ -1,6 +1,6 @@
 flask
 python-dotenv
-infobip-api-python-client
+gunicorn
 python-dateutil
 flask_sqlalchemy
 flask_login
