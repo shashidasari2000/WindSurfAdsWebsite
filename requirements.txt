@@ -9,3 +9,4 @@ Werkzeug
 alembic
 sqlalchemy
 hashids
+psycopg2-binary
