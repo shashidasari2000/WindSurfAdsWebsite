@@ -14,13 +14,15 @@ from hashids import Hashids
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv('FLASK_SECRET_KEY')
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
 
-if not app.secret_key:
-    raise ValueError("FLASK_SECRET_KEY not found in environment variables")
+# Configure database - Railway provides DATABASE_URL automatically
+database_url = os.getenv('DATABASE_URL')
+if database_url and database_url.startswith('postgres://'):
+    # Railway uses postgres:// but SQLAlchemy needs postgresql://
+    database_url = database_url.replace('postgres://', 'postgresql://', 1)
 
-# Configure PostgreSQL database
-app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'postgresql://archana@localhost:5432/auth_users')
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'postgresql://localhost:5432/jobconnect'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize database
@@ -223,9 +225,6 @@ def categories():
 MSG91_API_KEY = os.getenv('MSG91_API_KEY')
 MSG91_TEMPLATE_ID = os.getenv('MSG91_TEMPLATE_ID')
 MSG91_SENDER_ID = os.getenv('MSG91_SENDER_ID')
-
-if not all([MSG91_API_KEY, MSG91_TEMPLATE_ID, MSG91_SENDER_ID]):
-    raise ValueError("MSG91 configuration not found in environment variables")
 
 # Job listing routes
 @app.route('/jobs/<job_hashid>', methods=['GET', 'POST'])
@@ -455,7 +454,7 @@ def complete_profile():
                     name=company_name,
                     website=company_website,
                     description=company_description,
-                    user_id=current_user.id
+                    owner_id=current_user.id
                 )
                 db.session.add(company)
                 db.session.flush()  # Get the ID without committing
@@ -571,7 +570,7 @@ def post_job():
         db.session.commit()
         
         flash('Job posted successfully!', 'success')
-        return redirect(url_for('job_listings'))
+        return redirect(url_for('dashboard'))
     
     # GET request - show the form
     categories = Category.query.filter_by(is_active=True).all()
@@ -661,10 +660,10 @@ def delete_user():
     
     try:
         # Check if user has a company
-        if user.company:
+        if user.companies:
             # Delete the company first
-            db.session.delete(user.company)
-            db.session.commit()
+            for company in user.companies:
+                db.session.delete(company)
         
         # Delete job applications associated with the user
         JobApplication.query.filter_by(user_id=user.id).delete()
@@ -948,43 +947,6 @@ def send_otp(user):
     db.session.commit()
     
     return True
-    
-    # The following code is commented out since we're in development mode
-    """
-    url = "https://control.msg91.com/api/v5/flow/"
-    
-    # Remove any '+' prefix and ensure proper format
-    formatted_phone = user.phone_number.lstrip('+').replace(' ', '')
-    
-    payload = {
-        "template_id": MSG91_TEMPLATE_ID,
-        "sender": MSG91_SENDER_ID,
-        "short_url": "0",
-        "mobiles": formatted_phone,
-        "VAR1": otp  # This will replace {{otp}} in your MSG91 template
-    }
-    
-    headers = {
-        "accept": "application/json",
-        "content-type": "application/json",
-        "authkey": MSG91_API_KEY
-    }
-    
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        response.raise_for_status()
-        print(f"SMS sent. Response: {response.json()}")
-        
-        # Store OTP and its creation time
-        user.otp = otp
-        user.otp_created_at = datetime.utcnow()
-        db.session.commit()
-        
-        return True
-    except Exception as e:
-        print(f"Error sending SMS: {str(e)}")
-        return False
-    """
 
 def allowed_file(filename, allowed_extensions):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
@@ -995,4 +957,5 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5002)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
