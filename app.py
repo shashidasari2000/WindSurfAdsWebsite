@@ -16,21 +16,25 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
 
-# Configure database - Railway provides DATABASE_URL automatically
-database_url = os.getenv('DATABASE_URL')
-if database_url and database_url.startswith('postgres://'):
-    # Railway uses postgres:// but SQLAlchemy needs postgresql://
-    database_url = database_url.replace('postgres://', 'postgresql://', 1)
+# Configure database with proper Railway support
+def get_database_url():
+    """Get the correct database URL for the environment"""
+    database_url = os.getenv('DATABASE_URL')
+    
+    if database_url:
+        # Railway/Render provides postgres:// but SQLAlchemy needs postgresql://
+        if database_url.startswith('postgres://'):
+            database_url = database_url.replace('postgres://', 'postgresql://', 1)
+        return database_url
+    
+    # Fallback for local development
+    return 'sqlite:///instance/jobconnect.db'
 
-app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'postgresql://localhost:5432/jobconnect'
+app.config['SQLALCHEMY_DATABASE_URI'] = get_database_url()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Initialize database
 db.init_app(app)
-
-# Create database tables
-with app.app_context():
-    db.create_all()
 
 # Initialize Flask-Login
 login_manager = LoginManager()
@@ -221,7 +225,7 @@ def categories():
     categories = Category.query.filter_by(is_active=True).all()
     return render_template('categories.html', categories=categories)
 
-# MSG91 configuration
+# MSG91 configuration (optional)
 MSG91_API_KEY = os.getenv('MSG91_API_KEY')
 MSG91_TEMPLATE_ID = os.getenv('MSG91_TEMPLATE_ID')
 MSG91_SENDER_ID = os.getenv('MSG91_SENDER_ID')
@@ -659,9 +663,9 @@ def delete_user():
         return redirect(url_for('view_users'))
     
     try:
-        # Check if user has a company
+        # Check if user has companies
         if user.companies:
-            # Delete the company first
+            # Delete the companies first
             for company in user.companies:
                 db.session.delete(company)
         
@@ -955,6 +959,14 @@ def allowed_file(filename, allowed_extensions):
 UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'uploads')
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
+
+# Create database tables on startup
+with app.app_context():
+    try:
+        db.create_all()
+        print("✅ Database tables created successfully!")
+    except Exception as e:
+        print(f"⚠️ Database initialization warning: {e}")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

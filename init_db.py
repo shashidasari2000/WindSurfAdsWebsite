@@ -11,13 +11,21 @@ def create_app():
     app = Flask(__name__)
     app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
     
-    # Configure database - Railway provides DATABASE_URL automatically
-    database_url = os.getenv('DATABASE_URL')
-    if database_url and database_url.startswith('postgres://'):
-        # Railway uses postgres:// but SQLAlchemy needs postgresql://
-        database_url = database_url.replace('postgres://', 'postgresql://', 1)
+    # Configure database with proper Railway support
+    def get_database_url():
+        """Get the correct database URL for the environment"""
+        database_url = os.getenv('DATABASE_URL')
+        
+        if database_url:
+            # Railway/Render provides postgres:// but SQLAlchemy needs postgresql://
+            if database_url.startswith('postgres://'):
+                database_url = database_url.replace('postgres://', 'postgresql://', 1)
+            return database_url
+        
+        # Fallback for local development
+        return 'sqlite:///instance/jobconnect.db'
     
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'postgresql://localhost:5432/jobconnect'
+    app.config['SQLALCHEMY_DATABASE_URI'] = get_database_url()
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     
     db.init_app(app)
@@ -29,6 +37,8 @@ def init_database():
     
     with app.app_context():
         try:
+            print(f"🔗 Connecting to database: {app.config['SQLALCHEMY_DATABASE_URI'][:50]}...")
+            
             # Create all tables
             db.create_all()
             print("✅ Database tables created successfully!")
@@ -77,6 +87,8 @@ def init_database():
             
         except Exception as e:
             print(f"❌ Error initializing database: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return False
 
 if __name__ == "__main__":
