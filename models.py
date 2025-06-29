@@ -27,13 +27,16 @@ class User(db.Model, UserMixin):
     bio = db.Column(db.Text, nullable=True)
     resume_path = db.Column(db.String(255), nullable=True)
     
-    # Foreign key for company association
+    # Foreign key for company association (for employers)
     company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=True)
     
     # Relationships
     applications = db.relationship('JobApplication', back_populates='user', lazy='dynamic')
     jobs = db.relationship('Job', back_populates='creator', lazy=True)
-    companies = db.relationship('Company', back_populates='owner', lazy=True)
+    # Fixed relationship - user can be associated with a company
+    company = db.relationship('Company', foreign_keys=[company_id], back_populates='employees')
+    # Companies owned by this user (for company owners)
+    owned_companies = db.relationship('Company', foreign_keys='Company.owner_id', back_populates='owner')
     skills = db.relationship('Skill', secondary='user_skills', lazy='subquery',
                            backref=db.backref('users', lazy=True))
     
@@ -45,6 +48,11 @@ class User(db.Model, UserMixin):
     
     def has_role(self, role_name):
         return self.role == role_name
+    
+    # Backward compatibility property
+    @property
+    def companies(self):
+        return self.owned_companies
     
     def __repr__(self):
         return f'<User {self.username}>'
@@ -81,7 +89,10 @@ class Company(db.Model):
     
     # Relationships
     jobs = db.relationship('Job', back_populates='company', lazy='dynamic')
-    owner = db.relationship('User', back_populates='companies')
+    # Company owner (the user who created/owns the company)
+    owner = db.relationship('User', foreign_keys=[owner_id], back_populates='owned_companies')
+    # Employees associated with this company
+    employees = db.relationship('User', foreign_keys='User.company_id', back_populates='company')
     
     def __repr__(self):
         return f'<Company {self.name}>'

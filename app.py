@@ -663,10 +663,10 @@ def delete_user():
         return redirect(url_for('view_users'))
     
     try:
-        # Check if user has companies
-        if user.companies:
+        # Check if user has owned companies
+        if user.owned_companies:
             # Delete the companies first
-            for company in user.companies:
+            for company in user.owned_companies:
                 db.session.delete(company)
         
         # Delete job applications associated with the user
