@@ -1,3 +1,5 @@
+import os
+import sys
 from flask import Flask, request, render_template, redirect, url_for, flash, jsonify, session, abort
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from dotenv import load_dotenv
@@ -5,7 +7,6 @@ from models import db, User, Job, Company, Category, JobType, ExperienceLevel, S
 from datetime import datetime, timedelta
 import random
 import string
-import os
 from werkzeug.utils import secure_filename
 from flask_migrate import Migrate
 from hashids import Hashids
@@ -14,7 +15,6 @@ from hashids import Hashids
 load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
 
 # Configure database with proper Render support
 def get_database_url():
@@ -22,16 +22,23 @@ def get_database_url():
     database_url = os.getenv('DATABASE_URL')
     
     if database_url:
+        print(f"🔗 Found DATABASE_URL: {database_url[:50]}...")
         # Render provides postgres:// but SQLAlchemy needs postgresql://
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
+            print("🔄 Converted postgres:// to postgresql://")
         return database_url
     
+    print("⚠️ No DATABASE_URL found, using SQLite fallback")
     # Fallback for local development
     return 'sqlite:///instance/jobconnect.db'
 
+# Set configuration
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['SQLALCHEMY_DATABASE_URI'] = get_database_url()
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+print(f"🗄️ Database URI: {app.config['SQLALCHEMY_DATABASE_URI'][:50]}...")
 
 # Initialize database
 db.init_app(app)
@@ -224,11 +231,6 @@ def categories():
     from models import Category
     categories = Category.query.filter_by(is_active=True).all()
     return render_template('categories.html', categories=categories)
-
-# MSG91 configuration (optional)
-MSG91_API_KEY = os.getenv('MSG91_API_KEY')
-MSG91_TEMPLATE_ID = os.getenv('MSG91_TEMPLATE_ID')
-MSG91_SENDER_ID = os.getenv('MSG91_SENDER_ID')
 
 # Job listing routes
 @app.route('/jobs/<job_hashid>', methods=['GET', 'POST'])
@@ -960,15 +962,8 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'upload
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 
-# Create database tables on startup (for development only)
-# In production, this should be handled by init_db.py
-if os.getenv('FLASK_ENV') == 'development':
-    with app.app_context():
-        try:
-            db.create_all()
-            print("✅ Database tables created successfully!")
-        except Exception as e:
-            print(f"⚠️ Database initialization warning: {e}")
+# Create upload directory if it doesn't exist
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))

@@ -17,16 +17,21 @@ def create_app():
         database_url = os.getenv('DATABASE_URL')
         
         if database_url:
+            print(f"🔗 Found DATABASE_URL: {database_url[:50]}...")
             # Render provides postgres:// but SQLAlchemy needs postgresql://
             if database_url.startswith('postgres://'):
                 database_url = database_url.replace('postgres://', 'postgresql://', 1)
+                print("🔄 Converted postgres:// to postgresql://")
             return database_url
         
+        print("⚠️ No DATABASE_URL found - this will cause issues on Render!")
         # Fallback for local development
         return 'sqlite:///instance/jobconnect.db'
     
     app.config['SQLALCHEMY_DATABASE_URI'] = get_database_url()
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    
+    print(f"🗄️ Database URI: {app.config['SQLALCHEMY_DATABASE_URI'][:50]}...")
     
     db.init_app(app)
     return app
@@ -39,8 +44,10 @@ def init_database():
     
     with app.app_context():
         try:
-            db_url = app.config['SQLALCHEMY_DATABASE_URI']
-            print(f"🔗 Connecting to database: {db_url[:50]}...")
+            # Test database connection first
+            print("🔍 Testing database connection...")
+            db.engine.execute('SELECT 1')
+            print("✅ Database connection successful!")
             
             # Create all tables
             print("📋 Creating database tables...")
@@ -102,22 +109,38 @@ def init_database():
             print(f"❌ Error initializing database: {str(e)}")
             import traceback
             traceback.print_exc()
+            
+            # Check if it's a connection error
+            if "connection" in str(e).lower() or "database" in str(e).lower():
+                print("\n🚨 DATABASE CONNECTION ISSUE:")
+                print("   - Make sure PostgreSQL service is running on Render")
+                print("   - Verify DATABASE_URL environment variable is set")
+                print("   - Check if database service is properly connected to web service")
+            
             return False
 
 if __name__ == "__main__":
-    print("=" * 50)
+    print("=" * 60)
     print("🚀 JOBCONNECT DATABASE INITIALIZATION")
-    print("=" * 50)
+    print("=" * 60)
+    
+    # Check for required environment variables
+    database_url = os.getenv('DATABASE_URL')
+    if not database_url:
+        print("❌ ERROR: DATABASE_URL environment variable not found!")
+        print("   This is required for Render deployment.")
+        print("   Make sure you've added a PostgreSQL database to your Render service.")
+        sys.exit(1)
     
     success = init_database()
     
     if success:
-        print("\n" + "=" * 50)
+        print("\n" + "=" * 60)
         print("✅ INITIALIZATION SUCCESSFUL!")
-        print("=" * 50)
+        print("=" * 60)
         sys.exit(0)
     else:
-        print("\n" + "=" * 50)
+        print("\n" + "=" * 60)
         print("❌ INITIALIZATION FAILED!")
-        print("=" * 50)
+        print("=" * 60)
         sys.exit(1)
