@@ -16,13 +16,13 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
 
-# Configure database with proper Railway support
+# Configure database with proper Render support
 def get_database_url():
     """Get the correct database URL for the environment"""
     database_url = os.getenv('DATABASE_URL')
     
     if database_url:
-        # Railway/Render provides postgres:// but SQLAlchemy needs postgresql://
+        # Render provides postgres:// but SQLAlchemy needs postgresql://
         if database_url.startswith('postgres://'):
             database_url = database_url.replace('postgres://', 'postgresql://', 1)
         return database_url
@@ -960,13 +960,15 @@ UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'upload
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 
-# Create database tables on startup
-with app.app_context():
-    try:
-        db.create_all()
-        print("✅ Database tables created successfully!")
-    except Exception as e:
-        print(f"⚠️ Database initialization warning: {e}")
+# Create database tables on startup (for development only)
+# In production, this should be handled by init_db.py
+if os.getenv('FLASK_ENV') == 'development':
+    with app.app_context():
+        try:
+            db.create_all()
+            print("✅ Database tables created successfully!")
+        except Exception as e:
+            print(f"⚠️ Database initialization warning: {e}")
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
