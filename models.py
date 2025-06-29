@@ -27,6 +27,9 @@ class User(db.Model, UserMixin):
     bio = db.Column(db.Text, nullable=True)
     resume_path = db.Column(db.String(255), nullable=True)
     
+    # Foreign key for company association
+    company_id = db.Column(db.Integer, db.ForeignKey('companies.id'), nullable=True)
+    
     # Relationships
     applications = db.relationship('JobApplication', back_populates='user', lazy='dynamic')
     jobs = db.relationship('Job', back_populates='creator', lazy=True)
