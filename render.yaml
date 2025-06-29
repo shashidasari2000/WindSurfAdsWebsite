@@ -3,13 +3,16 @@ services:
     name: jobconnect-app
     env: python
     runtime: python-3.11.7
-    buildCommand: "pip install -r requirements.txt"
-    startCommand: "gunicorn app:app"
+    plan: free
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+    startCommand: "python init_db.py && gunicorn app:app --bind 0.0.0.0:$PORT"
     envVars:
       - key: FLASK_SECRET_KEY
         generateValue: true
       - key: PYTHON_VERSION
         value: "3.11.7"
+      - key: PYTHONPATH
+        value: "."
   - type: pserv
     name: jobconnect-db
     env: postgresql
