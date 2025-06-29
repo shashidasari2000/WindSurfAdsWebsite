@@ -133,12 +133,13 @@ class Job(db.Model):
     category_id = db.Column(db.Integer, db.ForeignKey('categories.id'), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     
-    # Relationships
+    # Relationships with proper overlaps handling
     company = db.relationship('Company', back_populates='jobs')
     category = db.relationship('Category', back_populates='jobs')
     creator = db.relationship('User', back_populates='jobs')
     applications = db.relationship('JobApplication', back_populates='job', lazy='dynamic')
-    skills = db.relationship('Skill', secondary='job_skills')
+    # Fixed relationship to avoid overlaps warning
+    skills = db.relationship('Skill', secondary='job_skills', overlaps="job_skills")
     
     def __repr__(self):
         return f'<Job {self.title} at {self.company.name}>'
@@ -180,8 +181,8 @@ class Skill(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), nullable=False, unique=True)
     
-    # Many-to-many relationship with jobs
-    job_skills = db.relationship('JobSkill', back_populates='skill')
+    # Fixed relationship to avoid overlaps warning
+    job_skills = db.relationship('JobSkill', back_populates='skill', overlaps="skills")
     
     def __repr__(self):
         return f'<Skill {self.name}>'
@@ -194,9 +195,9 @@ class JobSkill(db.Model):
     skill_id = db.Column(db.Integer, db.ForeignKey('skills.id'), primary_key=True)
     is_required = db.Column(db.Boolean, default=True)
     
-    # Relationships
-    job = db.relationship('Job')
-    skill = db.relationship('Skill', back_populates='job_skills')
+    # Fixed relationships to avoid overlaps warnings
+    job = db.relationship('Job', overlaps="skills")
+    skill = db.relationship('Skill', back_populates='job_skills', overlaps="skills")
     
     def __repr__(self):
         return f'<JobSkill {self.job.title} - {self.skill.name}>'
